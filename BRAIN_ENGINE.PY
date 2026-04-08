@@ -1,7 +1,7 @@
 """
 Module: BRAIN_ENGINE (REFACTORED v2.0)
 Purpose: Neural API Router - LLM Ensemble for Code Generation
-Owner: SIR BOSS
+Owner: SIR, BURTON
 Architecture: Distributed LLM calling (15 models in parallel)
 """
 

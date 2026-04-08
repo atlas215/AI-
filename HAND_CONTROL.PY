@@ -1,7 +1,7 @@
 """
 Module: HAND_CONTROL (REFACTORED v2.0)
 Purpose: Executive Execution via Subprocess + Judge0 Cloud Compilation
-Owner: SIR BOSS
+Owner: SIR, BURTON
 Architecture: CLI execution + remote C code compilation
 """
 
@@ -265,7 +265,7 @@ class AtlasHandControlV2:
     
     def emergency_stop(self):
         """Emergency shutdown."""
-        logger.critical("EMERGENCY STOP TRIGGERED BY SIR BOSS")
+        logger.critical("EMERGENCY STOP TRIGGERED BY SIR, BURTON")
         exit(1)
 
 # ==================== MAIN ====================

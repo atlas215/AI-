@@ -1,7 +1,7 @@
 """
 Module: VISION_SYSTEM
 Purpose: Visual Input and Image Processing for ATLAS System
-Owner: SIR BOSS
+Owner: SIR, BURTON
 Libraries: OpenCV, PyAutoGUI, Pillow, NumPy
 """
 
@@ -61,7 +61,7 @@ class AtlasVisionSystem:
         return None
 
     def save_visual_evidence(self, label="SCREEN_REPORT"):
-        """Saves a timestamped screenshot for Sir Boss's review."""
+        """Saves a timestamped screenshot for SIR, BURTON's review."""
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         filename = f"{self.screenshot_dir}/{label}_{timestamp}.png"
         
@@ -75,7 +75,7 @@ class AtlasVisionSystem:
         pixel_color = screen.getpixel((x, y))
         return pixel_color # Returns (R, G, B)
 
-# Unit Test for Sir Boss
+# Unit Test for SIR, BURTON
 if __name__ == "__main__":
     vision = AtlasVisionSystem()
     

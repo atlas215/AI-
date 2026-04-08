@@ -328,7 +328,7 @@ MIT License - See LICENSE file
 
 ## 👨‍💼 Author
 
-**SIR BOSS** (atlas215)  
+**SIR, BURTON** (atlas215)  
 ATLAS System v2.0  
 April 2026
 

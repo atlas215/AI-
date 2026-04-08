@@ -1,7 +1,7 @@
 """
 Module: COMM_LINK (REFACTORED v2.0)
 Purpose: FastAPI Web Server with GitHub Persistence
-Owner: SIR BOSS
+Owner: SIR, BURTON
 Architecture: Web-based communication with auto git commits
 """
 

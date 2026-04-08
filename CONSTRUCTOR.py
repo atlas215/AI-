@@ -1,7 +1,7 @@
 """
 Project: ATLAS SYSTEM v2.0 (ASYNC GENERAL)
 Role: Supreme Commander (The General)
-Owner: SIR BOSS
+Owner: SIR, BURTON
 Environment: Python 3.12.8 | Asyncio-driven | Non-blocking architecture
 """
 
@@ -247,7 +247,7 @@ class AtlasGeneralAsync:
         self.brain.shutdown_sequence()
         self.comm.shutdown_sequence()
         
-        logger.info("ATLAS IS OFFLINE. STANDBY FOR SIR BOSS.")
+        logger.info("ATLAS IS OFFLINE. STANDBY FOR SIR, BURTON.")
         logger.info("="*60)
         
         self.is_active = False
