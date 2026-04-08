@@ -8,6 +8,7 @@ Architecture: Web-based communication with auto git commits
 import asyncio
 import json
 import logging
+from contextlib import asynccontextmanager
 from datetime import datetime
 from typing import Dict, List
 from fastapi import FastAPI, WebSocket, HTTPException
@@ -24,8 +25,26 @@ from config import (
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("COMM_LINK")
 
+# Lifespan handler for startup/shutdown
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Handle application startup and shutdown."""
+    # Startup: Start periodic commit task
+    commit_task = asyncio.create_task(comm_link.start_periodic_commit())
+    logger.info("Started periodic memory sync to GitHub")
+    
+    yield
+    
+    # Shutdown: Cancel task and save memory
+    commit_task.cancel()
+    try:
+        await commit_task
+    except asyncio.CancelledError:
+        pass
+    comm_link.shutdown_sequence()
+
 # FastAPI Application
-app = FastAPI(title="ATLAS Communication Link", version="2.0")
+app = FastAPI(title="ATLAS Communication Link", version="2.0", lifespan=lifespan)
 
 # CORS Middleware
 app.add_middleware(
@@ -101,7 +120,7 @@ class AtlasCommLinkV2:
     
     async def commit_to_github(self, message: str = None):
         """
-        Commits memory.json to GitHub repository.
+        Commits memory files to GitHub repository for live persistence.
         
         :param message: Custom commit message
         """
@@ -110,8 +129,14 @@ class AtlasCommLinkV2:
             return False
         
         try:
-            # Stage changes
-            self.repo.index.add([self.memory_file])
+            # Stage both memory files
+            memory_files = ["memory.json", "brain_decisions.json"]
+            self.repo.index.add(memory_files)
+            
+            # Check if there are changes
+            if not self.repo.index.diff("HEAD"):
+                logger.info("No changes to commit")
+                return True
             
             # Create commit message
             commit_msg = message or MEMORY_COMMIT_MESSAGE
@@ -209,6 +234,19 @@ class AtlasCommLinkV2:
         """Gracefully shutdown the communication link."""
         logger.info(f"[{datetime.now()}] COMM Link shutting down...")
         self._save_memory()
+    
+    async def start_periodic_commit(self):
+        """
+        Starts periodic memory commit to GitHub for live persistence.
+        Commits every 5 minutes to ensure memories are always stored.
+        """
+        while True:
+            try:
+                await self.commit_to_github("[AUTO] Periodic memory sync")
+                await asyncio.sleep(300)  # 5 minutes
+            except Exception as e:
+                logger.error(f"Periodic commit failed: {e}")
+                await asyncio.sleep(60)  # Retry in 1 minute on failure
 
 # ==================== FASTAPI ROUTES ====================
 

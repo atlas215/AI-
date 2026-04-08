@@ -11,9 +11,11 @@ import json
 import logging
 from typing import List, Dict, Any, Tuple
 from datetime import datetime
+from git import Repo
 from config import (
     LLM_PROVIDERS, GROQ_API_KEY, HUGGINGFACE_API_KEY, 
-    GITHUB_API_KEY, C_CODE_ANALYSIS_PROMPT, LLM_TIMEOUT
+    GITHUB_API_KEY, C_CODE_ANALYSIS_PROMPT, LLM_TIMEOUT,
+    GITHUB_REPO_OWNER, GITHUB_REPO_NAME, GITHUB_TOKEN
 )
 
 logging.basicConfig(level=logging.INFO)
@@ -106,6 +108,17 @@ class AtlasBrainEngineV2:
         
         # Load memory
         self.memory = self._load_memory()
+        
+        # Initialize GitHub repo for live memory persistence
+        try:
+            self.repo = Repo(".")
+            self.repo_owner = GITHUB_REPO_OWNER
+            self.repo_name = GITHUB_REPO_NAME
+            self.github_token = GITHUB_TOKEN
+            logger.info(f"GitHub repo initialized for brain decisions: {self.repo_owner}/{self.repo_name}")
+        except Exception as e:
+            logger.error(f"Failed to initialize GitHub repo: {e}")
+            self.repo = None
     
     def _load_memory(self) -> Dict:
         """Loads previous decisions from JSON memory."""
@@ -119,6 +132,42 @@ class AtlasBrainEngineV2:
         """Saves decisions to JSON memory."""
         with open(self.memory_file, 'w') as f:
             json.dump(self.memory, f, indent=2)
+    
+    async def _commit_decisions_to_github(self, message: str = None):
+        """
+        Commits brain decisions to GitHub for live memory persistence.
+        
+        :param message: Custom commit message
+        """
+        if not self.repo:
+            logger.error("GitHub repo not initialized for brain decisions")
+            return False
+        
+        try:
+            # Stage brain decisions file
+            self.repo.index.add([self.memory_file])
+            
+            # Check if there are changes
+            if not self.repo.index.diff("HEAD"):
+                logger.info("No brain decision changes to commit")
+                return True
+            
+            # Create commit message
+            commit_msg = message or "[BRAIN] Decision update"
+            commit_msg += f" at {datetime.now().isoformat()}"
+            
+            # Commit
+            self.repo.index.commit(commit_msg)
+            
+            # Push to GitHub
+            origin = self.repo.remote(name='origin')
+            origin.push()
+            
+            logger.info(f"Brain decisions committed to GitHub: {commit_msg}")
+            return True
+        except Exception as e:
+            logger.error(f"Brain decisions GitHub commit failed: {e}")
+            return False
     
     def _get_all_models(self) -> List[Dict[str, Any]]:
         """Returns all 15 LLM models to call in parallel."""
@@ -285,6 +334,9 @@ class AtlasBrainEngineV2:
         }
         self.memory["decisions"].append(decision)
         self._save_memory()
+        
+        # Live persistence: Commit to GitHub immediately
+        await self._commit_decisions_to_github(f"[BRAIN] New decision: {best_provider} score {quality_score:.2f}")
         
         return {
             "selected_code": best_code,
