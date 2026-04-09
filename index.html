@@ -20,38 +20,6 @@
         </header>
 
         <section class="grid-panel">
-            <aside class="glass-panel">
-                <div class="panel-title">SYSTEM STATUS</div>
-                <div class="status-grid">
-                    <div class="status-card">
-                        <span>Uptime</span>
-                        <strong id="uptimeValue">00m 00s</strong>
-                    </div>
-                    <div class="status-card">
-                        <span>Memory Entries</span>
-                        <strong id="memoryCount">0</strong>
-                    </div>
-                    <div class="status-card">
-                        <span>Node Integrity</span>
-                        <strong id="nodeHealth">--%</strong>
-                    </div>
-                    <div class="status-card">
-                        <span>Arbitrage Score</span>
-                        <strong id="arbScore">--%</strong>
-                    </div>
-                </div>
-
-                <div class="panel-title">FONT-STYLE SELECTOR</div>
-                <div class="control-group">
-                    <label for="fontSelector">Terminal Font</label>
-                    <select id="fontSelector">
-                   <option value="matrix">Matrix</option>
-                        <option value="futuristic">Futuristic</option>
-                        <option value="techmono">Tech-Mono</option>
-                    </select>
-                </div>
-            </aside>
-
             <main class="glass-panel chat-panel">
                 <div class="panel-title">ATLAS v2.0 - Alien Chat Interface</div>
                 <div class="chat-window" id="chatWindow"></div>
@@ -60,15 +28,6 @@
                     <button id="chatSend" class="neon-btn">TRANSMIT</button>
                 </div>
             </main>
-
-            <aside class="glass-panel history-panel">
-                <div class="panel-title">CHAT HISTORY</div>
-                <div class="history-list" id="historyList"></div>
-                <div class="control-group history-controls">
-                    <button id="openChart" class="neon-btn">OPEN NEW CHART</button>
-                    <button id="saveChart" class="neon-btn">SAVE CHART</button>
-                </div>
-            </aside>
 
             <aside class="glass-panel">
                 <div class="panel-title">LIVE ANALYTICS</div>
@@ -81,7 +40,47 @@
                     <canvas id="connectivityChart"></canvas>
                 </div>
             </aside>
+
+            <aside class="glass-panel history-panel">
+                <div class="panel-title">CHAT HISTORY</div>
+                <div class="history-list" id="historyList"></div>
+                <div class="control-group history-controls">
+                    <button id="openChart" class="neon-btn">OPEN NEW CHART</button>
+                    <button id="saveChart" class="neon-btn">SAVE CHART</button>
+                </div>
+            </aside>
         </section>
+
+        <!-- System Status Panel - Bottom -->
+        <aside class="glass-panel system-status-bottom">
+            <div class="panel-title">SYSTEM STATUS</div>
+            <div class="status-grid-horizontal">
+                <div class="status-card">
+                    <span>Uptime</span>
+                    <strong id="uptimeValue">00m 00s</strong>
+                </div>
+                <div class="status-card">
+                    <span>Memory Entries</span>
+                    <strong id="memoryCount">0</strong>
+                </div>
+                <div class="status-card">
+                    <span>Node Integrity</span>
+                    <strong id="nodeHealth">--%</strong>
+                </div>
+                <div class="status-card">
+                    <span>Arbitrage Score</span>
+                    <strong id="arbScore">--%</strong>
+                </div>
+                <div class="control-group" style="margin-left: auto;">
+                    <label for="fontSelector">Terminal Font</label>
+                    <select id="fontSelector">
+                        <option value="matrix">Matrix</option>
+                        <option value="futuristic">Futuristic</option>
+                        <option value="techmono">Tech-Mono</option>
+                    </select>
+                </div>
+            </div>
+        </aside>
 
         <!-- Minimized Chart in Corner -->
         <div class="chart-minimized hidden" id="minimizedChart">
