@@ -80,12 +80,28 @@
                     <div class="chart-title">Global Node Connectivity</div>
                     <canvas id="connectivityChart"></canvas>
                 </div>
-                <div class="chart-card hidden" id="customChartCard">
-                    <div class="chart-title">ATLAS Conversation Intelligence</div>
-                    <canvas id="customChart"></canvas>
-                </div>
             </aside>
         </section>
+
+        <!-- Minimized Chart in Corner -->
+        <div class="chart-minimized hidden" id="minimizedChart">
+            <div class="chart-card">
+                <div class="chart-title">ATLAS Conversation Intelligence (Click to Expand)</div>
+                <canvas id="customChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Fullscreen Chart Modal -->
+        <div class="chart-fullscreen hidden" id="chartFullscreenModal">
+            <button class="close-fullscreen-btn" id="closeFullscreenBtn">CLOSE</button>
+            <div class="glass-panel">
+                <div class="panel-title">ATLAS - CONVERSATION INTELLIGENCE [FULLSCREEN]</div>
+                <div class="chart-card" id="fullscreenChartContainer">
+                    <div class="chart-title">ATLAS Conversation Intelligence</div>
+                    <canvas id="customChartFullscreen"></canvas>
+                </div>
+            </div>
+        </div>
 
         <footer class="footer-panel">
             <div class="control-group">

@@ -10,8 +10,11 @@ const chatInput = document.getElementById('chatInput');
 const chatSend = document.getElementById('chatSend');
 const openChartButton = document.getElementById('openChart');
 const saveChartButton = document.getElementById('saveChart');
-const customChartCard = document.getElementById('customChartCard');
+const minimizedChart = document.getElementById('minimizedChart');
 const customChartCanvas = document.getElementById('customChart');
+const chartFullscreenModal = document.getElementById('chartFullscreenModal');
+const closeFullscreenBtn = document.getElementById('closeFullscreenBtn');
+const customChartFullscreenCanvas = document.getElementById('customChartFullscreen');
 const wsStatus = document.getElementById('wsStatus');
 const uptimeValue = document.getElementById('uptimeValue');
 const memoryCount = document.getElementById('memoryCount');
@@ -294,6 +297,12 @@ function sendChat() {
         timestamp: new Date().toISOString(),
     };
 
+    // Auto-show chart on fullscreen when message is sent
+    setTimeout(() => {
+        openNewChart();
+        setTimeout(showChartFullscreen, 500);
+    }, 1500);
+
     if (ws && ws.readyState === WebSocket.OPEN) {
         ws.send(JSON.stringify(payload));
     } else {
@@ -440,7 +449,7 @@ function openNewChart() {
         }
     });
 
-    customChartCard.classList.remove('hidden');
+    minimizedChart.classList.remove('hidden');
     activeChart = customChart;
 }
 
@@ -461,6 +470,104 @@ function saveCurrentChart() {
     typewriterMessage('Chart saved locally. Sir Burton can review it anytime.');
 }
 
+function showChartFullscreen() {
+    if (!customChart) {
+        openNewChart();
+    }
+    
+    setTimeout(() => {
+        // Recreate chart for fullscreen canvas
+        if (customChart) {
+            customChart.destroy();
+        }
+
+        const counts = memoryData.messages.reduce((acc, msg) => {
+            const user = msg.user || 'UNKNOWN';
+            acc[user] = (acc[user] || 0) + 1;
+            return acc;
+        }, {});
+
+        const labels = Object.keys(counts);
+        const data = labels.map((label) => counts[label]);
+        const bgColors = labels.map((label, index) => {
+            const palette = ['#39f4ff', '#7ef4c5', '#ff7f92', '#ffcd38', '#7d5fff', '#ff6bc5'];
+            return palette[index % palette.length];
+        });
+
+        customChart = new Chart(customChartFullscreenCanvas.getContext('2d'), {
+            type: 'bar',
+            data: {
+                labels,
+                datasets: [{
+                    label: 'Message Count',
+                    data,
+                    backgroundColor: bgColors,
+                    borderColor: '#ffffff55',
+                    borderWidth: 2,
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: true },
+                    title: {
+                        display: true,
+                        text: 'ATLAS Chat History Breakdown [FULLSCREEN MODE]',
+                        color: '#b5fff1',
+                        font: { size: 24 }
+                    }
+                },
+                scales: {
+                    x: { ticks: { color: '#b5fff1', font: { size: 14 } }, grid: { color: 'rgba(255,255,255,0.05)' } },
+                    y: { beginAtZero: true, ticks: { color: '#b5fff1', font: { size: 14 } }, grid: { color: 'rgba(255,255,255,0.05)' } }
+                }
+            }
+        });
+
+        minimizedChart.classList.add('hidden');
+        chartFullscreenModal.classList.remove('hidden');
+        activeChart = customChart;
+    }, 100);
+}
+
+function closeChartFullscreen() {
+    chartFullscreenModal.classList.add('hidden');
+    minimizedChart.classList.remove('hidden');
+    if (customChart) {
+        customChart.destroy();
+        customChart = new Chart(customChartCanvas.getContext('2d'), {
+            type: 'bar',
+            data: {
+                labels: [],
+                datasets: [{
+                    label: 'Message Count',
+                    data: [],
+                    backgroundColor: [],
+                    borderColor: '#ffffff55',
+                    borderWidth: 1,
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: { display: false },
+                    title: {
+                        display: true,
+                        text: 'ATLAS Chat History Breakdown',
+                        color: '#b5fff1',
+                        font: { size: 16 }
+                    }
+                },
+                scales: {
+                    x: { ticks: { color: '#b5fff1' }, grid: { color: 'rgba(255,255,255,0.05)' } },
+                    y: { beginAtZero: true, ticks: { color: '#b5fff1' }, grid: { color: 'rgba(255,255,255,0.05)' } }
+                }
+            }
+        });
+    }
+}
+
 chatSend.addEventListener('click', sendChat);
 chatInput.addEventListener('keydown', (event) => {
     if (event.key === 'Enter') {
@@ -475,6 +582,9 @@ fontSelector.addEventListener('change', (event) => {
 
 openChartButton.addEventListener('click', openNewChart);
 saveChartButton.addEventListener('click', saveCurrentChart);
+
+minimizedChart.addEventListener('click', showChartFullscreen);
+closeFullscreenBtn.addEventListener('click', closeChartFullscreen);
 
 toggleRainButton.addEventListener('click', toggleRain);
 rainSpeedSlider.addEventListener('input', (event) => {
