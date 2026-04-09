@@ -13,7 +13,7 @@
         <header class="topbar">
             <div class="welcome-pill">
                 <span>WELCOME SIR BURTON AM HERE TO ASSIST YOU ANYTHING SIR.</span>
-                <span>yawe yanatembea</span>
+                <span>ATLAS {ADVANCED TACTICAL LEARNING AND ANALYSIS SYSTEM}</span>
             </div>
             <div class="signal-pill" id="wsStatus">WS: Offline</div>
         </header>
@@ -60,6 +60,15 @@
                 </div>
             </main>
 
+            <aside class="glass-panel history-panel">
+                <div class="panel-title">CHAT HISTORY</div>
+                <div class="history-list" id="historyList"></div>
+                <div class="control-group history-controls">
+                    <button id="openChart" class="neon-btn">OPEN NEW CHART</button>
+                    <button id="saveChart" class="neon-btn">SAVE CHART</button>
+                </div>
+            </aside>
+
             <aside class="glass-panel">
                 <div class="panel-title">LIVE ANALYTICS</div>
                 <div class="chart-card">
@@ -69,6 +78,10 @@
                 <div class="chart-card">
                     <div class="chart-title">Global Node Connectivity</div>
                     <canvas id="connectivityChart"></canvas>
+                </div>
+                <div class="chart-card hidden" id="customChartCard">
+                    <div class="chart-title">ATLAS Conversation Intelligence</div>
+                    <canvas id="customChart"></canvas>
                 </div>
             </aside>
         </section>

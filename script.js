@@ -4,8 +4,13 @@ const BASE_HTTP = `${CURRENT_PROTOCOL}//${CURRENT_HOST}`;
 const BASE_WS = `${CURRENT_PROTOCOL === 'https:' ? 'wss' : 'ws'}://${CURRENT_HOST}/ws`;
 
 const chatWindow = document.getElementById('chatWindow');
+const historyList = document.getElementById('historyList');
 const chatInput = document.getElementById('chatInput');
 const chatSend = document.getElementById('chatSend');
+const openChartButton = document.getElementById('openChart');
+const saveChartButton = document.getElementById('saveChart');
+const customChartCard = document.getElementById('customChartCard');
+const customChartCanvas = document.getElementById('customChart');
 const wsStatus = document.getElementById('wsStatus');
 const uptimeValue = document.getElementById('uptimeValue');
 const memoryCount = document.getElementById('memoryCount');
@@ -27,6 +32,8 @@ let reconnectTimeoutId = null;
 let memoryData = null;
 let flashChart = null;
 let connectivityChart = null;
+let customChart = null;
+let activeChart = null;
 let initializedHistory = false;
 let pageStart = Date.now();
 
@@ -132,10 +139,7 @@ function fetchMemory() {
         .then((memory) => {
             memoryData = memory;
             updateMetrics(memory);
-            if (!initializedHistory) {
-                populateHistory(memory);
-                initializedHistory = true;
-            }
+            populateHistory(memory);
             updateCharts(memory);
         })
         .catch(() => {
@@ -155,8 +159,10 @@ function populateHistory(memory) {
         return;
     }
     chatWindow.innerHTML = '';
-    const history = memory.messages.slice(-10);
-    history.forEach((item) => {
+    historyList.innerHTML = '';
+
+    const latest = memory.messages.slice(-10);
+    latest.forEach((item) => {
         if (item.user && item.user.toLowerCase().includes('sir')) {
             const bubble = addMessageBubble(item.user, item.message, 'user');
             bubble.textContent = item.message;
@@ -165,6 +171,17 @@ function populateHistory(memory) {
             bubble.textContent = item.message;
         }
     });
+
+    memory.messages.slice().reverse().forEach((item) => {
+        addHistoryEntry(item);
+    });
+}
+
+function addHistoryEntry(item) {
+    const entry = document.createElement('div');
+    entry.className = `history-entry ${item.user && item.user.toLowerCase().includes('sir') ? 'user' : 'atlas'}`;
+    entry.innerHTML = `<span class="history-user">${item.user || 'UNKNOWN'}</span><span class="history-time">${new Date(item.timestamp).toLocaleTimeString()}</span><div class="history-text">${item.message}</div>`;
+    historyList.appendChild(entry);
 }
 
 function getReconnectDelay(attempt) {
@@ -360,6 +377,81 @@ function createCharts() {
     });
 }
 
+function openNewChart() {
+    if (!memoryData || !Array.isArray(memoryData.messages)) {
+        typewriterMessage('Loading chat memory before generating the new chart...');
+        fetchMemory();
+        return;
+    }
+
+    const counts = memoryData.messages.reduce((acc, msg) => {
+        const user = msg.user || 'UNKNOWN';
+        acc[user] = (acc[user] || 0) + 1;
+        return acc;
+    }, {});
+
+    const labels = Object.keys(counts);
+    const data = labels.map((label) => counts[label]);
+    const bgColors = labels.map((label, index) => {
+        const palette = ['#39f4ff', '#7ef4c5', '#ff7f92', '#ffcd38', '#7d5fff', '#ff6bc5'];
+        return palette[index % palette.length];
+    });
+
+    if (customChart) {
+        customChart.destroy();
+    }
+
+    customChart = new Chart(customChartCanvas.getContext('2d'), {
+        type: 'bar',
+        data: {
+            labels,
+            datasets: [{
+                label: 'Message Count',
+                data,
+                backgroundColor: bgColors,
+                borderColor: '#ffffff55',
+                borderWidth: 1,
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: { display: false },
+                title: {
+                    display: true,
+                    text: 'ATLAS Chat History Breakdown',
+                    color: '#b5fff1',
+                    font: { size: 16 }
+                }
+            },
+            scales: {
+                x: { ticks: { color: '#b5fff1' }, grid: { color: 'rgba(255,255,255,0.05)' } },
+                y: { beginAtZero: true, ticks: { color: '#b5fff1' }, grid: { color: 'rgba(255,255,255,0.05)' } }
+            }
+        }
+    });
+
+    customChartCard.classList.remove('hidden');
+    activeChart = customChart;
+}
+
+function saveCurrentChart() {
+    const chartToSave = activeChart || customChart || flashChart;
+    if (!chartToSave) {
+        typewriterMessage('No chart is available to save yet. Open a chart first.');
+        return;
+    }
+
+    const imageUrl = chartToSave.toBase64Image();
+    const link = document.createElement('a');
+    link.href = imageUrl;
+    link.download = `atlas_chart_${Date.now()}.png`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    typewriterMessage('Chart saved locally. Sir Burton can review it anytime.');
+}
+
 chatSend.addEventListener('click', sendChat);
 chatInput.addEventListener('keydown', (event) => {
     if (event.key === 'Enter') {
@@ -371,6 +463,9 @@ chatInput.addEventListener('keydown', (event) => {
 fontSelector.addEventListener('change', (event) => {
     setFontStyle(event.target.value);
 });
+
+openChartButton.addEventListener('click', openNewChart);
+saveChartButton.addEventListener('click', saveCurrentChart);
 
 toggleRainButton.addEventListener('click', toggleRain);
 rainSpeedSlider.addEventListener('input', (event) => {
