@@ -5,6 +5,7 @@ const BASE_WS = `${CURRENT_PROTOCOL === 'https:' ? 'wss' : 'ws'}://${CURRENT_HOS
 
 const chatWindow = document.getElementById('chatWindow');
 const historyList = document.getElementById('historyList');
+const digitalClock = document.getElementById('digitalClock');
 const chatInput = document.getElementById('chatInput');
 const chatSend = document.getElementById('chatSend');
 const openChartButton = document.getElementById('openChart');
@@ -42,6 +43,14 @@ function setWsStatus(text, online) {
     wsStatus.style.color = online ? '#0a0f08' : '#ffffff';
     wsStatus.style.backgroundColor = online ? '#34ff7d' : '#ff3d46';
     wsStatus.style.boxShadow = online ? '0 0 18px rgba(52,255,125,0.45)' : '0 0 18px rgba(255,61,70,0.45)';
+}
+
+function updateDigitalClock() {
+    const now = new Date();
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    const seconds = String(now.getSeconds()).padStart(2, '0');
+    digitalClock.textContent = `${hours}:${minutes}:${seconds}`;
 }
 
 function resizeCanvas() {
@@ -480,5 +489,7 @@ createCharts();
 createWebSocket();
 fetchMemory();
 fetchHealth();
+updateDigitalClock();
+setInterval(updateDigitalClock, 1000);
 requestAnimationFrame(drawRain);
 setInterval(fetchMemory, 18000);

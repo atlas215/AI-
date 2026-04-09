@@ -70,6 +70,21 @@ canvas#matrixRain {
     display: block;
 }
 
+.digital-clock {
+    font-size: clamp(1.2rem, 2vw, 1.8rem);
+    font-family: 'Courier New', monospace;
+    font-weight: bold;
+    color: #39f4ff;
+    text-shadow: 0 0 12px rgba(57, 244, 255, 0.8), 0 0 24px rgba(57, 244, 255, 0.4);
+    letter-spacing: 0.08em;
+    animation: pulse-glow 2s ease-in-out infinite;
+}
+
+@keyframes pulse-glow {
+    0%, 100% { text-shadow: 0 0 12px rgba(57, 244, 255, 0.8), 0 0 24px rgba(57, 244, 255, 0.4); }
+    50% { text-shadow: 0 0 20px rgba(57, 244, 255, 1), 0 0 40px rgba(57, 244, 255, 0.6); }
+}
+
 .status-pill,
 .signal-pill {
     padding: 12px 16px;
