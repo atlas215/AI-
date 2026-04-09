@@ -11,7 +11,7 @@ import logging
 from contextlib import asynccontextmanager
 from datetime import datetime
 from typing import Dict, List
-from fastapi import FastAPI, WebSocket, HTTPException
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import aiohttp
@@ -45,6 +45,10 @@ async def lifespan(app: FastAPI):
 
 # FastAPI Application
 app = FastAPI(title="ATLAS Communication Link", version="2.0", lifespan=lifespan)
+
+# WebSocket heartbeat settings
+WEBSOCKET_HEARTBEAT_INTERVAL = 10
+WEBSOCKET_HEARTBEAT_TIMEOUT = 30
 
 # CORS Middleware
 app.add_middleware(
@@ -303,32 +307,60 @@ async def command_endpoint(cmd: SystemCommand):
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
     """
-    WebSocket endpoint for real-time communication.
+    WebSocket endpoint for real-time communication with heartbeat support.
     """
     await websocket.accept()
     logger.info("WebSocket client connected")
-    
+
+    stop_heartbeat = asyncio.Event()
+
+    async def send_heartbeat_loop():
+        try:
+            while not stop_heartbeat.is_set():
+                await asyncio.sleep(WEBSOCKET_HEARTBEAT_INTERVAL)
+                await websocket.send_json({
+                    "type": "heartbeat",
+                    "timestamp": datetime.now().isoformat(),
+                    "status": "alive"
+                })
+        except Exception as e:
+            logger.debug(f"Heartbeat send failed: {e}")
+
+    heartbeat_task = asyncio.create_task(send_heartbeat_loop())
+
     try:
         while True:
-            # Receive message
-            data = await websocket.receive_text()
+            data = await asyncio.wait_for(websocket.receive_text(), timeout=WEBSOCKET_HEARTBEAT_TIMEOUT)
             msg_data = json.loads(data)
-            
-            # Log message
+
+            if msg_data.get("type") == "heartbeat":
+                await websocket.send_json({
+                    "type": "heartbeat_ack",
+                    "timestamp": datetime.now().isoformat(),
+                    "status": "ack"
+                })
+                continue
+
             result = await comm_link.log_message(
                 msg_data.get("user", "unknown"),
                 msg_data.get("message", "")
             )
-            
-            # Send confirmation
+
             await websocket.send_json({
                 "status": "received",
                 "data": result
             })
+    except asyncio.TimeoutError:
+        logger.warning("WebSocket heartbeat timeout, closing connection")
+        await websocket.close(code=4000)
+    except WebSocketDisconnect:
+        logger.info("WebSocket client disconnected")
     except Exception as e:
         logger.error(f"WebSocket error: {e}")
     finally:
-        logger.info("WebSocket client disconnected")
+        stop_heartbeat.set()
+        heartbeat_task.cancel()
+        logger.info("WebSocket cleanup complete")
 
 @app.get("/memory")
 async def get_memory():

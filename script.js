@@ -1,0 +1,389 @@
+const CURRENT_HOST = window.location.host && window.location.host !== '' ? window.location.host : 'localhost:8000';
+const CURRENT_PROTOCOL = location.protocol === 'https:' ? 'https:' : 'http:';
+const BASE_HTTP = `${CURRENT_PROTOCOL}//${CURRENT_HOST}`;
+const BASE_WS = `${CURRENT_PROTOCOL === 'https:' ? 'wss' : 'ws'}://${CURRENT_HOST}/ws`;
+
+const chatWindow = document.getElementById('chatWindow');
+const chatInput = document.getElementById('chatInput');
+const chatSend = document.getElementById('chatSend');
+const wsStatus = document.getElementById('wsStatus');
+const uptimeValue = document.getElementById('uptimeValue');
+const memoryCount = document.getElementById('memoryCount');
+const nodeHealth = document.getElementById('nodeHealth');
+const arbScore = document.getElementById('arbScore');
+const fontSelector = document.getElementById('fontSelector');
+const toggleRainButton = document.getElementById('toggleRain');
+const rainSpeedSlider = document.getElementById('rainSpeed');
+const rainCanvas = document.getElementById('matrixRain');
+const ctx = rainCanvas.getContext('2d');
+
+let rainColumns = [];
+let rainActive = true;
+let rainSpeed = Number(rainSpeedSlider.value);
+let ws = null;
+let reconnectAttempt = 0;
+let heartbeatIntervalId = null;
+let reconnectTimeoutId = null;
+let memoryData = null;
+let flashChart = null;
+let connectivityChart = null;
+let initializedHistory = false;
+let pageStart = Date.now();
+
+function setWsStatus(text, online) {
+    wsStatus.textContent = text;
+    wsStatus.style.color = online ? '#0a0f08' : '#ffffff';
+    wsStatus.style.backgroundColor = online ? '#34ff7d' : '#ff3d46';
+    wsStatus.style.boxShadow = online ? '0 0 18px rgba(52,255,125,0.45)' : '0 0 18px rgba(255,61,70,0.45)';
+}
+
+function resizeCanvas() {
+    rainCanvas.width = window.innerWidth;
+    rainCanvas.height = window.innerHeight;
+
+    const columns = Math.floor(rainCanvas.width / 18);
+    rainColumns = Array.from({ length: columns }, () => Math.random() * rainCanvas.height);
+}
+
+function drawRain() {
+    if (!rainActive) {
+        ctx.clearRect(0, 0, rainCanvas.width, rainCanvas.height);
+        return;
+    }
+
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.08)';
+    ctx.fillRect(0, 0, rainCanvas.width, rainCanvas.height);
+    ctx.fillStyle = 'rgba(57, 255, 168, 0.8)';
+    ctx.font = '16px Courier New, monospace';
+
+    rainColumns.forEach((y, index) => {
+        const x = index * 18;
+        const char = String.fromCharCode(0x30a0 + Math.random() * 96);
+        ctx.fillText(char, x, y);
+
+        if (y > rainCanvas.height + Math.random() * 1000) {
+            rainColumns[index] = 0;
+        } else {
+            rainColumns[index] = y + 14 * rainSpeed;
+        }
+    });
+
+    requestAnimationFrame(drawRain);
+}
+
+function toggleRain() {
+    rainActive = !rainActive;
+    toggleRainButton.textContent = rainActive ? 'RAIN: ON' : 'RAIN: OFF';
+    if (rainActive) {
+        drawRain();
+    }
+}
+
+function setFontStyle(style) {
+    document.body.classList.remove('font-matrix', 'font-futuristic', 'font-techmono');
+    document.body.classList.add(`font-${style}`);
+}
+
+function addMessageBubble(sender, message, type) {
+    const bubble = document.createElement('div');
+    bubble.className = `chat-bubble ${type}`;
+    bubble.innerHTML = `<span class="meta">${sender}</span><span class="content"></span>`;
+    chatWindow.appendChild(bubble);
+    chatWindow.scrollTop = chatWindow.scrollHeight;
+    return bubble.querySelector('.content');
+}
+
+function addUserMessage(message) {
+    const content = addMessageBubble('SIR BURTON', message, 'user');
+    content.textContent = message;
+}
+
+function typewriterMessage(message) {
+    const content = addMessageBubble('ATLAS', '', 'atlas');
+    let idx = 0;
+    const interval = Math.max(20, 45 - Math.round(rainSpeed * 10));
+    const timer = setInterval(() => {
+        content.textContent += message[idx] || '';
+        idx += 1;
+        chatWindow.scrollTop = chatWindow.scrollHeight;
+
+        if (idx > message.length - 1) {
+            clearInterval(timer);
+        }
+    }, interval);
+}
+
+function fetchHealth() {
+    fetch(`${BASE_HTTP}/health`)
+        .then((response) => response.json())
+        .then(() => {
+            const uptimeSeconds = Math.floor((Date.now() - pageStart) / 1000);
+            uptimeValue.textContent = `${Math.floor(uptimeSeconds / 60)}m ${uptimeSeconds % 60}s`;
+            setWsStatus('WS: Connected', true);
+        })
+        .catch(() => {
+            setWsStatus('WS: Disconnected', false);
+        });
+}
+
+function fetchMemory() {
+    fetch(`${BASE_HTTP}/memory`)
+        .then((response) => response.json())
+        .then((memory) => {
+            memoryData = memory;
+            updateMetrics(memory);
+            if (!initializedHistory) {
+                populateHistory(memory);
+                initializedHistory = true;
+            }
+            updateCharts(memory);
+        })
+        .catch(() => {
+            // ignore transient failures
+        });
+}
+
+function updateMetrics(memory) {
+    const totalMessages = Array.isArray(memory.messages) ? memory.messages.length : 0;
+    memoryCount.textContent = `${totalMessages}`;
+    nodeHealth.textContent = `${Math.min(99, 76 + totalMessages)}%`;
+    arbScore.textContent = `${Math.max(68, 88 - Math.floor(totalMessages / 2))}%`;
+}
+
+function populateHistory(memory) {
+    if (!memory || !Array.isArray(memory.messages)) {
+        return;
+    }
+    chatWindow.innerHTML = '';
+    const history = memory.messages.slice(-10);
+    history.forEach((item) => {
+        if (item.user && item.user.toLowerCase().includes('sir')) {
+            const bubble = addMessageBubble(item.user, item.message, 'user');
+            bubble.textContent = item.message;
+        } else {
+            const bubble = addMessageBubble('ATLAS', item.message, 'atlas');
+            bubble.textContent = item.message;
+        }
+    });
+}
+
+function getReconnectDelay(attempt) {
+    return Math.min(16000, 2000 * Math.pow(2, attempt));
+}
+
+function clearHeartbeat() {
+    if (heartbeatIntervalId) {
+        clearInterval(heartbeatIntervalId);
+        heartbeatIntervalId = null;
+    }
+}
+
+function startHeartbeat() {
+    clearHeartbeat();
+    heartbeatIntervalId = setInterval(() => {
+        if (ws && ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({ type: 'heartbeat', timestamp: new Date().toISOString() }));
+        }
+    }, 10000);
+}
+
+function resetReconnect() {
+    reconnectAttempt = 0;
+    if (reconnectTimeoutId) {
+        clearTimeout(reconnectTimeoutId);
+        reconnectTimeoutId = null;
+    }
+}
+
+function scheduleReconnect() {
+    clearHeartbeat();
+    if (reconnectTimeoutId) {
+        return;
+    }
+    reconnectAttempt = Math.min(reconnectAttempt + 1, 3);
+    const delay = getReconnectDelay(reconnectAttempt);
+    setWsStatus(`WS: Reconnecting in ${delay / 1000}s`, false);
+    reconnectTimeoutId = setTimeout(() => {
+        reconnectTimeoutId = null;
+        createWebSocket();
+    }, delay);
+}
+
+function createWebSocket() {
+    if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) {
+        return;
+    }
+
+    ws = new WebSocket(BASE_WS);
+    setWsStatus('WS: Connecting...', false);
+
+    ws.addEventListener('open', () => {
+        setWsStatus('Live Pulse', true);
+        resetReconnect();
+        fetchHealth();
+        fetchMemory();
+        startHeartbeat();
+    });
+
+    ws.addEventListener('message', (event) => {
+        try {
+            const payload = JSON.parse(event.data);
+            if (payload.type === 'heartbeat' || payload.type === 'heartbeat_ack') {
+                setWsStatus('Live Pulse', true);
+                return;
+            }
+
+            if (payload.status === 'received' && payload.data) {
+                typewriterMessage(`Memory saved. Message received at ${new Date(payload.data.timestamp).toLocaleTimeString()}`);
+                fetchMemory();
+            }
+        } catch (error) {
+            typewriterMessage('Atlas received an update. Verifying system memory.');
+        }
+    });
+
+    ws.addEventListener('close', () => {
+        ws = null;
+        scheduleReconnect();
+    });
+
+    ws.addEventListener('error', () => {
+        setWsStatus('WS: Error', false);
+        if (ws) {
+            ws.close();
+        }
+    });
+}
+
+function sendChat() {
+    const message = chatInput.value.trim();
+    if (!message) {
+        return;
+    }
+    addUserMessage(message);
+    chatInput.value = '';
+    const payload = {
+        user: 'SIR BURTON',
+        message,
+        timestamp: new Date().toISOString(),
+    };
+
+    if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify(payload));
+    } else {
+        fetch(`${BASE_HTTP}/chat`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+        })
+            .then((response) => response.json())
+            .then((data) => {
+                typewriterMessage(`Atlas logged your message at ${new Date(data.timestamp).toLocaleTimeString()}`);
+                fetchMemory();
+            })
+            .catch(() => {
+                typewriterMessage('Atlas is offline. Your message will retry when connection returns.');
+            });
+    }
+}
+
+function updateCharts(memory) {
+    const base = Array.from({ length: 6 }, (_, index) => {
+        return Math.round(65 + index * 4 + (memory.messages?.length || 0) * 0.4 + (Math.random() - 0.5) * 8);
+    });
+
+    const connectivity = [
+        Math.round(Math.min(100, 82 + (memory.messages?.length || 0) * 0.3 + Math.random() * 6)),
+        Math.round(Math.max(0, 12 + Math.random() * 8)),
+        Math.round(Math.max(0, 4 + Math.random() * 4)),
+    ];
+
+    flashChart.data.datasets[0].data = base;
+    connectivityChart.data.datasets[0].data = connectivity;
+    flashChart.update();
+    connectivityChart.update();
+}
+
+function createCharts() {
+    const flashCtx = document.getElementById('arbitrageChart').getContext('2d');
+    flashChart = new Chart(flashCtx, {
+        type: 'line',
+        data: {
+            labels: ['T-5', 'T-4', 'T-3', 'T-2', 'T-1', 'NOW'],
+            datasets: [
+                {
+                    label: 'Flash Loan Arbitrage',
+                    data: [72, 78, 82, 88, 91, 94],
+                    borderColor: '#36ffdb',
+                    backgroundColor: 'rgba(54, 255, 219, 0.16)',
+                    tension: 0.35,
+                    pointRadius: 4,
+                    pointBackgroundColor: '#39f4ff',
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: { display: false },
+                tooltip: { mode: 'index', intersect: false }
+            },
+            scales: {
+                x: { grid: { color: 'rgba(62, 255, 184, 0.08)' }, ticks: { color: '#8dffdf' } },
+                y: { beginAtZero: true, max: 110, grid: { color: 'rgba(62, 255, 184, 0.08)' }, ticks: { color: '#8dffdf' } }
+            }
+        }
+    });
+
+    const connectivityCtx = document.getElementById('connectivityChart').getContext('2d');
+    connectivityChart = new Chart(connectivityCtx, {
+        type: 'doughnut',
+        data: {
+            labels: ['Online', 'Latency', 'Offline'],
+            datasets: [
+                {
+                    data: [88, 8, 4],
+                    backgroundColor: ['#39f4ff', '#78ffca', '#2c8d9e'],
+                    borderWidth: 0,
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: { color: '#b5fff1' }
+                }
+            }
+        }
+    });
+}
+
+chatSend.addEventListener('click', sendChat);
+chatInput.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter') {
+        event.preventDefault();
+        sendChat();
+    }
+});
+
+fontSelector.addEventListener('change', (event) => {
+    setFontStyle(event.target.value);
+});
+
+toggleRainButton.addEventListener('click', toggleRain);
+rainSpeedSlider.addEventListener('input', (event) => {
+    rainSpeed = Number(event.target.value);
+});
+
+window.addEventListener('resize', resizeCanvas);
+
+setFontStyle('matrix');
+resizeCanvas();
+createCharts();
+createWebSocket();
+fetchMemory();
+fetchHealth();
+requestAnimationFrame(drawRain);
+setInterval(fetchMemory, 18000);

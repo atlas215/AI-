@@ -3,258 +3,89 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ATLAS AI Chat - SIR, BURTON</title>
-    <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            margin: 0;
-            padding: 0;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
-
-        .chat-container {
-            background: white;
-            border-radius: 20px;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
-            width: 90%;
-            max-width: 800px;
-            height: 80vh;
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-        }
-
-        .chat-header {
-            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-            color: white;
-            padding: 20px;
-            text-align: center;
-            font-size: 1.5em;
-            font-weight: bold;
-            border-radius: 20px 20px 0 0;
-        }
-
-        .chat-messages {
-            flex: 1;
-            padding: 20px;
-            overflow-y: auto;
-            background: #f8f9fa;
-        }
-
-        .message {
-            margin-bottom: 15px;
-            padding: 12px 16px;
-            border-radius: 18px;
-            max-width: 70%;
-            word-wrap: break-word;
-        }
-
-        .message.user {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            margin-left: auto;
-            text-align: right;
-        }
-
-        .message.atlas {
-            background: #e9ecef;
-            color: #333;
-            margin-right: auto;
-        }
-
-        .chat-input {
-            padding: 20px;
-            background: white;
-            border-top: 1px solid #dee2e6;
-            display: flex;
-            gap: 10px;
-        }
-
-        #messageInput {
-            flex: 1;
-            padding: 12px 16px;
-            border: 2px solid #dee2e6;
-            border-radius: 25px;
-            font-size: 16px;
-            outline: none;
-            transition: border-color 0.3s;
-        }
-
-        #messageInput:focus {
-            border-color: #667eea;
-        }
-
-        #sendButton {
-            padding: 12px 24px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border: none;
-            border-radius: 25px;
-            font-size: 16px;
-            cursor: pointer;
-            transition: transform 0.2s;
-        }
-
-        #sendButton:hover {
-            transform: scale(1.05);
-        }
-
-        #sendButton:disabled {
-            background: #6c757d;
-            cursor: not-allowed;
-            transform: none;
-        }
-
-        .typing {
-            display: none;
-            font-style: italic;
-            color: #6c757d;
-            padding: 10px 20px;
-        }
-
-        .status {
-            text-align: center;
-            padding: 10px;
-            background: #d4edda;
-            color: #155724;
-            border-radius: 0 0 20px 20px;
-            font-size: 14px;
-        }
-
-        .status.error {
-            background: #f8d7da;
-            color: #721c24;
-        }
-    </style>
+    <title>Alien-System ATLAS v2.0 Dashboard</title>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div class="chat-container">
-        <div class="chat-header">
-            🤖 ATLAS AI Assistant - SIR, BURTON
-        </div>
+    <canvas id="matrixRain"></canvas>
 
-        <div class="chat-messages" id="chatMessages">
-            <div class="message atlas">
-                Hello! I'm ATLAS v2.0, your AI assistant created by SIR, BURTON. How can I help you today?
+    <div class="dashboard-shell">
+        <header class="topbar">
+            <div class="welcome-pill">
+                <span>WELCOME SIR BURTON AM HERE TO ASSIST YOU ANYTHING SIR.</span>
+                <span>yawe yanatembea</span>
             </div>
-        </div>
+            <div class="signal-pill" id="wsStatus">WS: Offline</div>
+        </header>
 
-        <div class="typing" id="typingIndicator">
-            ATLAS is thinking...
-        </div>
+        <section class="grid-panel">
+            <aside class="glass-panel">
+                <div class="panel-title">SYSTEM STATUS</div>
+                <div class="status-grid">
+                    <div class="status-card">
+                        <span>Uptime</span>
+                        <strong id="uptimeValue">00m 00s</strong>
+                    </div>
+                    <div class="status-card">
+                        <span>Memory Entries</span>
+                        <strong id="memoryCount">0</strong>
+                    </div>
+                    <div class="status-card">
+                        <span>Node Integrity</span>
+                        <strong id="nodeHealth">--%</strong>
+                    </div>
+                    <div class="status-card">
+                        <span>Arbitrage Score</span>
+                        <strong id="arbScore">--%</strong>
+                    </div>
+                </div>
 
-        <div class="chat-input">
-            <input type="text" id="messageInput" placeholder="Type your message here..." maxlength="500">
-            <button id="sendButton">Send</button>
-        </div>
+                <div class="panel-title">FONT-STYLE SELECTOR</div>
+                <div class="control-group">
+                    <label for="fontSelector">Terminal Font</label>
+                    <select id="fontSelector">
+                   <option value="matrix">Matrix</option>
+                        <option value="futuristic">Futuristic</option>
+                        <option value="techmono">Tech-Mono</option>
+                    </select>
+                </div>
+            </aside>
 
-        <div class="status" id="status">
-            Connected to ATLAS server
-        </div>
+            <main class="glass-panel chat-panel">
+                <div class="panel-title">ATLAS v2.0 - Alien Chat Interface</div>
+                <div class="chat-window" id="chatWindow"></div>
+                <div class="chat-input-bar">
+                    <input id="chatInput" type="text" placeholder="Transmit command to ATLAS..." autocomplete="off" />
+                    <button id="chatSend" class="neon-btn">TRANSMIT</button>
+                </div>
+            </main>
+
+            <aside class="glass-panel">
+                <div class="panel-title">LIVE ANALYTICS</div>
+                <div class="chart-card">
+                    <div class="chart-title">Flash Loan Arbitrage Performance</div>
+                    <canvas id="arbitrageChart"></canvas>
+                </div>
+                <div class="chart-card">
+                    <div class="chart-title">Global Node Connectivity</div>
+                    <canvas id="connectivityChart"></canvas>
+                </div>
+            </aside>
+        </section>
+
+        <footer class="footer-panel">
+            <div class="control-group">
+                <button id="toggleRain" class="neon-btn">RAIN: ON</button>
+                <label for="rainSpeed">Code Rain Speed</label>
+                <input id="rainSpeed" type="range" min="0.5" max="3" step="0.1" value="1.4" />
+            </div>
+            <div class="control-group">
+                <span>Connected to COMM_LINK.PY</span>
+            </div>
+        </footer>
     </div>
 
-    <script>
-        const ATLAS_API_URL = 'http://localhost:8000';
-        const chatMessages = document.getElementById('chatMessages');
-        const messageInput = document.getElementById('messageInput');
-        const sendButton = document.getElementById('sendButton');
-        const typingIndicator = document.getElementById('typingIndicator');
-        const statusDiv = document.getElementById('status');
-
-        let isConnected = false;
-
-        // Check server connection
-        async function checkConnection() {
-            try {
-                const response = await fetch(`${ATLAS_API_URL}/health`);
-                if (response.ok) {
-                    isConnected = true;
-                    statusDiv.textContent = 'Connected to ATLAS server';
-                    statusDiv.classList.remove('error');
-                } else {
-                    throw new Error('Server not responding');
-                }
-            } catch (error) {
-                isConnected = false;
-                statusDiv.textContent = 'Cannot connect to ATLAS server. Make sure it\'s running on port 8000.';
-                statusDiv.classList.add('error');
-                console.error('Connection error:', error);
-            }
-        }
-
-        // Send message to ATLAS
-        async function sendMessage(message) {
-            if (!isConnected) {
-                addMessage('ATLAS', 'Sorry, I cannot connect to the server right now. Please make sure ATLAS is running.', 'atlas');
-                return;
-            }
-
-            try {
-                typingIndicator.style.display = 'block';
-                sendButton.disabled = true;
-
-                const response = await fetch(`${ATLAS_API_URL}/chat`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        user: 'WebUser',
-                        message: message
-                    })
-                });
-
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-
-                const data = await response.json();
-                addMessage('ATLAS', `Response logged: ${data.message || 'Message processed'}`, 'atlas');
-
-            } catch (error) {
-                console.error('Error sending message:', error);
-                addMessage('ATLAS', 'Sorry, there was an error processing your message. Please try again.', 'atlas');
-            } finally {
-                typingIndicator.style.display = 'none';
-                sendButton.disabled = false;
-            }
-        }
-
-        // Add message to chat
-        function addMessage(sender, message, type) {
-            const messageDiv = document.createElement('div');
-            messageDiv.className = `message ${type}`;
-            messageDiv.textContent = `${sender}: ${message}`;
-            chatMessages.appendChild(messageDiv);
-            chatMessages.scrollTop = chatMessages.scrollHeight;
-        }
-
-        // Event listeners
-        sendButton.addEventListener('click', () => {
-            const message = messageInput.value.trim();
-            if (message) {
-                addMessage('You', message, 'user');
-                sendMessage(message);
-                messageInput.value = '';
-            }
-        });
-
-        messageInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                sendButton.click();
-            }
-        });
-
-        // Initialize
-        checkConnection();
-        setInterval(checkConnection, 30000); // Check connection every 30 seconds
-
-        // Focus input
-        messageInput.focus();
-    </script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="script.js"></script>
 </body>
 </html>
