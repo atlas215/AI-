@@ -400,5 +400,5 @@ if __name__ == "__main__":
         app,
         host=FASTAPI_HOST,
         port=FASTAPI_PORT,
-        debug=FASTAPI_DEBUG
+        reload=FASTAPI_DEBUG
     )
