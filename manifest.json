@@ -1,0 +1,24 @@
+{
+  "name": "ATLAS AI",
+  "short_name": "ATLAS",
+  "description": "ATLAS v2.0 - Advanced Tactical Learning and Analysis System",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#020608",
+  "theme_color": "#020608",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/icons/atlas-icon-192.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml"
+    },
+    {
+      "src": "/icons/atlas-icon-512.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml"
+    }
+  ],
+  "categories": ["utilities", "productivity"],
+  "prefer_related_applications": false
+}

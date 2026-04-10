@@ -29,6 +29,29 @@ body {
     position: relative;
 }
 
+.top-marquee {
+    position: relative;
+    z-index: 1;
+    overflow: hidden;
+    white-space: nowrap;
+    border-bottom: 1px solid rgba(65, 255, 202, 0.22);
+    padding: 10px 0;
+    margin: 0 24px 12px;
+    font-size: clamp(1rem, 1.2vw, 1.15rem);
+    color: #7ef4c5;
+    text-transform: uppercase;
+}
+
+.top-marquee span {
+    display: inline-block;
+    animation: marquee 18s linear infinite;
+}
+
+@keyframes marquee {
+    0% { transform: translateX(100%); }
+    100% { transform: translateX(-100%); }
+}
+
 canvas#matrixRain {
     position: fixed;
     inset: 0;
@@ -89,7 +112,11 @@ canvas#matrixRain {
 
 .status-pill,
 .signal-pill {
-    padding: 12px 16px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 12px 18px;
     border-radius: 999px;
     border: 1px solid rgba(37, 255, 169, 0.18);
     background: rgba(0, 0, 0, 0.34);
@@ -97,6 +124,25 @@ canvas#matrixRain {
     font-weight: 700;
     min-width: 140px;
     text-align: center;
+}
+
+.connection-pulse {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #ff3d46;
+    box-shadow: 0 0 10px rgba(255, 61, 70, 0.45);
+    animation: pulse-connection 1.8s ease-in-out infinite;
+}
+
+.signal-pill.online .connection-pulse {
+    background: #34ff7d;
+    box-shadow: 0 0 12px rgba(52, 255, 125, 0.55);
+}
+
+@keyframes pulse-connection {
+    0%, 100% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.35); opacity: 0.6; }
 }
 
 .grid-panel {

@@ -1,7 +1,46 @@
-const CURRENT_HOST = window.location.host && window.location.host !== '' ? window.location.host : 'localhost:8000';
-const CURRENT_PROTOCOL = location.protocol === 'https:' ? 'https:' : 'http:';
-const BASE_HTTP = `${CURRENT_PROTOCOL}//${CURRENT_HOST}`;
-const BASE_WS = `${CURRENT_PROTOCOL === 'https:' ? 'wss' : 'ws'}://${CURRENT_HOST}/ws`;
+const IS_GITHUB_PAGES = window.location.hostname.endsWith('github.io') || window.location.hostname.includes('githubusercontent.com');
+const API_URL_QUERY_PARAM = 'api_url';
+const TUNNEL_URL_QUERY_PARAM = 'tunnel_url';
+const API_STORAGE_KEY = 'atlas_api_url';
+const isMobileDevice = /Mobi|Android|iPhone|iPad|iPod|Opera Mini|IEMobile/.test(navigator.userAgent);
+
+function getQueryParam(key) {
+    const params = new URLSearchParams(window.location.search);
+    return params.get(key);
+}
+
+function resolveSavedApiUrl() {
+    return (
+        localStorage.getItem(API_STORAGE_KEY) ||
+        sessionStorage.getItem(API_STORAGE_KEY) ||
+        getQueryParam(API_URL_QUERY_PARAM) ||
+        getQueryParam(TUNNEL_URL_QUERY_PARAM)
+    );
+}
+
+function detectApiBaseUrl() {
+    const savedUrl = resolveSavedApiUrl();
+    if (savedUrl) {
+        return savedUrl.replace(/\/$/, '');
+    }
+
+    if (IS_GITHUB_PAGES) {
+        const tunnelUrl = localStorage.getItem('atlas_tunnel_url') || getQueryParam('tunnel_url');
+        if (tunnelUrl) {
+            return tunnelUrl.replace(/\/$/, '');
+        }
+        console.warn('GitHub Pages detected. Please set ?api_url=https://your-ngrok-url or save atlas_api_url in localStorage.');
+        return window.location.origin;
+    }
+
+    return `${window.location.protocol}//${window.location.host}`;
+}
+
+const API_BASE_URL = detectApiBaseUrl();
+const CURRENT_PROTOCOL = API_BASE_URL.startsWith('https') ? 'https:' : 'http:';
+const CURRENT_HOST = new URL(API_BASE_URL).host;
+const BASE_HTTP = API_BASE_URL;
+const BASE_WS = `${API_BASE_URL.startsWith('https') ? 'wss' : 'ws'}://${CURRENT_HOST}/ws`;
 
 const chatWindow = document.getElementById('chatWindow');
 const historyList = document.getElementById('historyList');
@@ -42,10 +81,11 @@ let initializedHistory = false;
 let pageStart = Date.now();
 
 function setWsStatus(text, online) {
-    wsStatus.textContent = text;
-    wsStatus.style.color = online ? '#0a0f08' : '#ffffff';
+    wsStatus.innerHTML = `<span class="connection-pulse"></span>${text}`;
+    wsStatus.style.color = online ? '#020b05' : '#ffffff';
     wsStatus.style.backgroundColor = online ? '#34ff7d' : '#ff3d46';
     wsStatus.style.boxShadow = online ? '0 0 18px rgba(52,255,125,0.45)' : '0 0 18px rgba(255,61,70,0.45)';
+    wsStatus.classList.toggle('online', online);
 }
 
 function updateDigitalClock() {
@@ -60,8 +100,13 @@ function resizeCanvas() {
     rainCanvas.width = window.innerWidth;
     rainCanvas.height = window.innerHeight;
 
-    const columns = Math.floor(rainCanvas.width / 18);
+    const density = isMobileDevice ? 32 : 18;
+    const columns = Math.max(16, Math.floor(rainCanvas.width / density));
     rainColumns = Array.from({ length: columns }, () => Math.random() * rainCanvas.height);
+
+    if (isMobileDevice && rainSpeed > 1.2) {
+        rainSpeed = 1.0;
+    }
 }
 
 function drawRain() {
@@ -568,6 +613,34 @@ function closeChartFullscreen() {
     }
 }
 
+let deferredInstallPrompt = null;
+window.addEventListener('beforeinstallprompt', (event) => {
+    event.preventDefault();
+    deferredInstallPrompt = event;
+    console.info('ATLAS install prompt ready.');
+});
+
+async function registerServiceWorker() {
+    if ('serviceWorker' in navigator) {
+        try {
+            await navigator.serviceWorker.register('/service-worker.js');
+            console.info('ATLAS service worker registered');
+        } catch (error) {
+            console.warn('Service worker registration failed:', error);
+        }
+    }
+}
+
+function getPwaInstallPrompt() {
+    if (deferredInstallPrompt) {
+        deferredInstallPrompt.prompt();
+        deferredInstallPrompt.userChoice.then((choiceResult) => {
+            console.info('User choice:', choiceResult.outcome);
+            deferredInstallPrompt = null;
+        });
+    }
+}
+
 chatSend.addEventListener('click', sendChat);
 chatInput.addEventListener('keydown', (event) => {
     if (event.key === 'Enter') {
@@ -596,6 +669,7 @@ window.addEventListener('resize', resizeCanvas);
 setFontStyle('matrix');
 resizeCanvas();
 createCharts();
+registerServiceWorker();
 createWebSocket();
 fetchMemory();
 fetchHealth();

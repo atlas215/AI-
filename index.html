@@ -4,10 +4,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Alien-System ATLAS v2.0 Dashboard</title>
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#020608">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <link rel="apple-touch-icon" href="/icons/atlas-icon-192.svg">
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <canvas id="matrixRain"></canvas>
+
+    <div class="top-marquee"><span>WELCOME SIR BURTON AM HERE TO ASSIST YOU ANYTHING SIR.</span></div>
 
     <div class="dashboard-shell">
         <header class="topbar">
@@ -16,7 +22,7 @@
                 <span>WELCOME SIR BURTON AM HERE TO ASSIST YOU ANYTHING SIR.</span>
                 <span>ATLAS {ADVANCED TACTICAL LEARNING AND ANALYSIS SYSTEM}</span>
             </div>
-            <div class="signal-pill" id="wsStatus">WS: Offline</div>
+            <div class="signal-pill" id="wsStatus"><span class="connection-pulse"></span>WS: Offline</div>
         </header>
 
         <section class="grid-panel">

@@ -3,7 +3,7 @@ name: ATLAS Runtime Watchdog
 on:
   workflow_dispatch:
   schedule:
-    - cron: '0 */4 * * *' # every 4 hours
+    - cron: '0 * * * *' # every hour
 
 jobs:
   keep-alive:
@@ -27,8 +27,10 @@ jobs:
       - name: Start ATLAS processes with automatic restart
         run: |
           mkdir -p logs
+          chmod +x keep_alive.sh
           nohup bash -lc 'while true; do python CONSTRUCTOR.py >> logs/constructor.log 2>&1; echo "[ATLAS] CONSTRUCTOR exited at $(date) - restarting" >> logs/constructor.log; sleep 2; done' &
           nohup bash -lc 'while true; do uvicorn COMM_LINK:app --host 0.0.0.0 --port 8000 --workers 1 --reload false >> logs/uvicorn.log 2>&1; echo "[ATLAS] Uvicorn exited at $(date) - restarting" >> logs/uvicorn.log; sleep 2; done' &
           nohup bash -lc 'python heartbeat.py >> logs/heartbeat.log 2>&1' &
+          nohup bash -lc './keep_alive.sh >> logs/keep_alive.log 2>&1' &
           echo "ATLAS runtime started"
           sleep infinity
